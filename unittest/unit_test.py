@@ -4,9 +4,7 @@ import joblib as pickle
 # Assuming your utils and the necessary imports are correctly set up.
 
 
-class DataLoaderTest(
-    unittest.TestCase
-):  # Renamed class to avoid confusion with PyTorch DataLoader
+class DataLoaderTest(unittest.TestCase):
     def setUp(self):
         # This method will be called before each test method
         self.dataloader = pickle.load("./data/processed/dataloader.pkl")
