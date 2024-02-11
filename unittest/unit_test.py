@@ -8,6 +8,10 @@ from utils import total_params
 from generator import Generator
 from discriminator import Discriminator
 
+#####################
+#     DataLoader    #
+#####################
+
 
 class DataLoaderTest(unittest.TestCase):
     def setUp(self):
@@ -27,7 +31,10 @@ class DataLoaderTest(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
-# =======================================================================================#
+
+#####################
+#   Discriminator   #
+#####################
 
 
 class DisTest(unittest.TestCase):
@@ -44,7 +51,9 @@ if __name__ == "__main__":
     unittest.main()
 
 
-# =======================================================================================#
+#####################
+#     Generator     #
+#####################
 
 
 class GenTest(unittest.TestCase):
