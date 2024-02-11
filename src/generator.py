@@ -3,105 +3,158 @@ import argparse
 from collections import OrderedDict
 import torch.nn as nn
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    filemode="w",
-                    filename="./logs/generator.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filemode="w",
+    filename="./logs/generator.log",
+)
 
 
 class Generator(nn.Module):
     """
-    A generator model for generating synthetic images from a latent space using a series of
-    transposed convolutional layers. This model is typically used in Generative Adversarial Networks (GANs).
+    The Generator class for a Generative Adversarial Network (GAN), responsible for generating synthetic images from a latent space vector.
+
+    This module builds an architecture that progressively upsamples the input latent vector to a full-sized image (e.g., 64x64 pixels) through a series of ConvTranspose2d layers, each followed by BatchNorm2d and ReLU activations, except for the final layer which uses a Tanh activation to output RGB image data.
+
+    Parameters:
+    - nz (int): Size of the latent vector (z). Default is 100.
+    - ngf (int): Defines the depth of feature maps carried through the generator, relating to the size of the generator's feature maps. Default is 64.
 
     Attributes:
-        latent_space (int): The size of the latent space from which the generator synthesizes images.
-        image_size (int): The size of one side of the square image to generate. Assumes images are square.
-        kernel_size (int): The size of the kernel to use in convolutional layers.
-        stride (int): The stride of the convolution.
-        padding (int): The padding of the convolution.
-        layers_config (list of tuples): A configuration list where each tuple specifies the parameters for each
-                                        transposed convolutional layer in the form (in_channels, out_channels,
-                                        kernel_size, stride, padding, bias).
+    - layer_config (OrderedDict): An ordered dictionary specifying the layers and configurations of the generator model.
+    - main (nn.Sequential): The sequential container that constitutes the generator, built from `layer_config`.
+
+    The architecture details include upsampling from a latent vector to a 64x64 3-channel RGB image, progressively doubling the spatial dimensions of the feature maps while reducing their depth, starting from `ngf * 8` to `ngf`, and finally outputting to 3 channels.
 
     Methods:
-        connected_layer(layers_config=None): Constructs the sequential model based on the provided layer configuration.
-        forward(x): Defines the forward pass of the generator.
+    - forward(input): Defines the forward pass of the generator.
+
+    Example:
+        generator = Generator(nz=100, ngf=64)
+        # Assuming `latent_vector` is a batch of random vectors from the latent space
+        fake_images = generator(latent_vector)
+
+    Note:
+    The output images are normalized between -1 and 1, corresponding to the range of the Tanh activation function used in the final layer.
+
+    Layer Details:
+    - ConvTrans1: Upsamples the input latent vector to a spatial dimension of 4x4 with `ngf*8` feature maps.
+    - BatchNorm1 and ReLU1: Applied after the first ConvTranspose2d layer.
+    - ConvTrans2 to ConvTrans4: Further upsampling steps, each doubling the spatial dimensions and halving the depth of feature maps, with BatchNorm and ReLU activations.
+    - ConvTrans5: Final upsampling step to produce a 3-channel RGB image of size 64x64. Followed by a Tanh activation.
     """
 
     def __init__(self, latent_space=100, image_size=64):
         """
-        Initializes the Generator model with the specified latent space size and image dimensions.
+        The Generator class for a Generative Adversarial Network (GAN), responsible for generating synthetic images from a latent space vector.
+
+        This module builds an architecture that progressively upsamples the input latent vector to a full-sized image (e.g., 64x64 pixels) through a series of ConvTranspose2d layers, each followed by BatchNorm2d and ReLU activations, except for the final layer which uses a Tanh activation to output RGB image data.
 
         Parameters:
-            latent_space (int): The dimensionality of the input latent space.
-            image_size (int): The height/width of the output image.
+        - nz (int): Size of the latent vector (z). Default is 100.
+        - ngf (int): Defines the depth of feature maps carried through the generator, relating to the size of the generator's feature maps. Default is 64.
+
+        Attributes:
+        - layer_config (OrderedDict): An ordered dictionary specifying the layers and configurations of the generator model.
+        - main (nn.Sequential): The sequential container that constitutes the generator, built from `layer_config`.
+
+        The architecture details include upsampling from a latent vector to a 64x64 3-channel RGB image, progressively doubling the spatial dimensions of the feature maps while reducing their depth, starting from `ngf * 8` to `ngf`, and finally outputting to 3 channels.
+
+        Methods:
+        - forward(input): Defines the forward pass of the generator.
+
+        Example:
+            generator = Generator(nz=100, ngf=64)
+            # Assuming `latent_vector` is a batch of random vectors from the latent space
+            fake_images = generator(latent_vector)
+
+        Note:
+        The output images are normalized between -1 and 1, corresponding to the range of the Tanh activation function used in the final layer.
+
+        Layer Details:
+        - ConvTrans1: Upsamples the input latent vector to a spatial dimension of 4x4 with `ngf*8` feature maps.
+        - BatchNorm1 and ReLU1: Applied after the first ConvTranspose2d layer.
+        - ConvTrans2 to ConvTrans4: Further upsampling steps, each doubling the spatial dimensions and halving the depth of feature maps, with BatchNorm and ReLU activations.
+        - ConvTrans5: Final upsampling step to produce a 3-channel RGB image of size 64x64. Followed by a Tanh activation.
         """
+        self.nz = latent_space
+        self.ngf = image_size
         super(Generator, self).__init__()
-        self.latent_space = latent_space
-        self.image_size = image_size
-        self.kernel_size = 4
-        self.stride = 2
-        self.padding = 1
 
-        self.layers_config = [
-            (self.latent_space, self.image_size * 8, self.kernel_size, self.stride // 2, 0, False,),
-            (self.image_size * 8, self.image_size * 4, self.kernel_size, self.stride, self.padding, False,),
-            (self.image_size * 4, self.image_size * 2, self.kernel_size, self.stride, self.padding, False,),
-            (self.image_size * 2, self.image_size, self.kernel_size, self.stride, self.padding, False,),
-            (self.image_size, 3, self.kernel_size, self.stride, self.padding, False,),
-        ]
-
-        self.model = self._create_layers()
-
-    def _create_layers(self):
-        """
-        Constructs the sequential model based on the provided layer configuration.
-
-        Returns:
-            nn.Sequential: A PyTorch Sequential model composed of the specified layers.
-        """
-        layers = OrderedDict()
-        for index, (in_channels, out_channels, kernel_size, stride, padding, bias,) in enumerate(self.layers_config[:-1]):
-            layers[f"{index}_convTrans"] = nn.ConvTranspose2d(
-                in_channels, out_channels, kernel_size, stride, padding, bias=bias
-            )
-            layers[f"{index}_batch_norm"] = nn.BatchNorm2d(out_channels)
-            layers[f"{index}_relu"] = nn.ReLU(inplace=True)
-
-        (in_channels, out_channels, kernel_size, stride, padding, bias) = (
-            self.layers_config[-1]
+        self.layer_config = OrderedDict(
+            [
+                (
+                    "convTrans1",
+                    nn.ConvTranspose2d(self.nz, self.ngf * 8, 4, 1, 0, bias=False),
+                ),
+                ("batchNorm1", nn.BatchNorm2d(self.ngf * 8)),
+                ("relu1", nn.ReLU(True)),
+                (
+                    "convTrans2",
+                    nn.ConvTranspose2d(self.ngf * 8, self.ngf * 4, 4, 2, 1, bias=False),
+                ),
+                ("batchNorm2", nn.BatchNorm2d(self.ngf * 4)),
+                ("relu2", nn.ReLU(True)),
+                (
+                    "convTrans3",
+                    nn.ConvTranspose2d(self.ngf * 4, self.ngf * 2, 4, 2, 1, bias=False),
+                ),
+                ("batchNorm3", nn.BatchNorm2d(self.ngf * 2)),
+                ("relu3", nn.ReLU(True)),
+                (
+                    "convTrans4",
+                    nn.ConvTranspose2d(self.ngf * 2, self.ngf, 4, 2, 1, bias=False),
+                ),
+                ("batchNorm4", nn.BatchNorm2d(self.ngf)),
+                ("relu4", nn.ReLU(True)),
+                ("convTrans5", nn.ConvTranspose2d(self.ngf, 3, 4, 2, 1, bias=False)),
+                ("tanh", nn.Tanh()),
+            ]
         )
-        layers["final_convTrans"] = nn.ConvTranspose2d(
-            in_channels, out_channels, kernel_size, stride, padding, bias=bias
-        )
-        layers["final_tanh"] = nn.Tanh()
 
-        return nn.Sequential(layers)
+        self.main = nn.Sequential(self.layer_config)
 
-    def forward(self, x):
+    def forward(self, input):
         """
-        Defines the forward pass of the generator with the input x.
+        Forward pass of the generator. Takes a latent vector and generates an image.
 
         Parameters:
-            x (Tensor): A PyTorch tensor representing the latent space input.
+        - input (torch.Tensor): A batch of latent vectors of shape `(N, nz, 1, 1)`, where N is the batch size.
 
         Returns:
-            Tensor: The generated image as a PyTorch tensor.
+        - torch.Tensor: A batch of generated images of shape `(N, 3, 64, 64)`, with pixel values normalized between -1 and 1.
         """
-        return self.model(x)
+        return self.main(input)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate images using a GAN model.".capitalize())
+    parser = argparse.ArgumentParser(
+        description="Generate images using a GAN model.".capitalize()
+    )
 
-    parser.add_argument("--image_size", type=int, default=64, help="Image size for training.".capitalize())
+    parser.add_argument(
+        "--image_size",
+        type=int,
+        default=64,
+        help="Image size for training.".capitalize(),
+    )
+
+    parser.add_argument(
+        "--latent_space",
+        type=int,
+        default=64,
+        help="Image size for training.".capitalize(),
+    )
 
     args = parser.parse_args()
 
-    if args.image_size:
+    if args.image_size and args.latent_space:
         logging.info(f"Training with image size: {args.image_size}")
 
-        generator = Generator(args.image_size)
+        generator = Generator(
+            latent_space=args.latent_space, image_size=args.image_size
+        )
+        logging.info("Generator loaded.".capitalize())
     else:
         logging.error("Please provide an image size.".capitalize())

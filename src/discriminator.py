@@ -1,139 +1,112 @@
 import logging
 import argparse
 from collections import OrderedDict
+import torch
 import torch.nn as nn
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                    filemode="w",
-                    filename="./logs/discriminator.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filemode="w",
+    filename="./logs/discriminator.log",
+)
 
 
 class Discriminator(nn.Module):
     """
-    A Discriminator class for a Generative Adversarial Network (GAN), designed to classify images as real or fake.
+    A Discriminator class for a Generative Adversarial Network (GAN), designed to differentiate between real and fake images.
 
-    This discriminator uses a series of convolutional layers with LeakyReLU activation functions and optional batch normalization
-    to process input images. The final output is a single value through a sigmoid activation function, indicating the likelihood
-    of the input image being real.
+    This module implements a series of convolutional layers with LeakyReLU activations and BatchNorm, progressively doubling the number of feature maps while reducing the spatial dimensions of the input image. The final layer uses a Sigmoid activation to output a probability indicating the likelihood of the input image being real.
+
+    Parameters:
+    - image_size (int): The height / width of the square input images. Default is 64. This parameter also indirectly controls the complexity of the discriminator's architecture by setting the size of feature maps.
 
     Attributes:
-        image_size (int): The size of the input images. Defaults to 64.
-        input_channels (int): The number of channels in the input images. Defaults to 3 (for RGB images).
-        kernel_size (int): The size of the convolving kernel. Defaults to 4.
-        stride (int): The stride of the convolution. Defaults to 2.
-        padding (int): The padding added to all sides of the input. Defaults to 1.
-        negative_slope (float): The negative slope value of the LeakyReLU activation function. Defaults to 0.2.
-        layers_config (list of tuples): Configuration for each layer in the model, specifying in_channels, out_channels,
-                                        kernel_size, stride, padding, negative_slope, and whether to use batch normalization.
+    - ndf (int): The size of the feature maps in the discriminator, initially set based on the `image_size`.
+    - layer_config (OrderedDict): An ordered dictionary that defines the architecture of the discriminator, including convolutional layers, batch normalization layers, and activation functions.
+    - main (nn.Sequential): The sequential container of layers as defined in `layer_config`.
+
+    The architecture starts with a convolutional layer with `ndf` (number of discriminator features) channels, followed by layers with `2*ndf`, `4*ndf`, and `8*ndf` channels, before concluding with a final convolution to a single output channel. Batch normalization is applied starting from the second convolutional layer.
 
     Methods:
-        connected_layer(layers_config): Constructs the discriminator model based on the provided layer configuration.
-        forward(x): Defines the forward pass of the discriminator.
+    - forward(input): Defines the forward pass of the discriminator.
 
     Example:
-        >>> discriminator = Discriminator(image_size=64)
-        >>> print(discriminator)
+        discriminator = Discriminator(image_size=64)
+        # Assuming `images` is a batch of real or generated images
+        predictions = discriminator(images)
+
+    Note:
+    The input images are expected to be 3-channel RGB images of size `[image_size, image_size]`. The discriminator dynamically adjusts its complexity based on the input image size.
+
+    Layer Details:
+    - Conv1: Input 3 channels, output `ndf` channels, 4x4 kernel, stride 2, padding 1, no bias.
+    - LeakyReLU1: Negative slope 0.2, inplace.
+    - Conv2: Input `ndf` channels, output `2*ndf` channels, 4x4 kernel, stride 2, padding 1, no bias.
+    - BN2: BatchNorm on `2*ndf` channels.
+    - LeakyReLU2: Negative slope 0.2, inplace.
+    - Conv3: Input `2*ndf` channels, output `4*ndf` channels, 4x4 kernel, stride 2, padding 1, no bias.
+    - BN3: BatchNorm on `4*ndf` channels.
+    - LeakyReLU3: Negative slope 0.2, inplace.
+    - Conv4: Input `4*ndf` channels, output `8*ndf` channels, 4x4 kernel, stride 2, padding 1, no bias.
+    - BN4: BatchNorm on `8*ndf` channels.
+    - LeakyReLU4: Negative slope 0.2, inplace.
+    - Conv5: Input `8*ndf` channels, output 1 channel, 4x4 kernel, stride 1, no padding, no bias.
+    - Sigmoid: Applied to the final layer output to obtain a probability.
     """
 
     def __init__(self, image_size=64):
-        """
-        Initializes the Discriminator with a specific image size and default values for other parameters. It builds the
-        discriminator model by setting up the layers based on a predefined configuration.
-
-        Parameters:
-            image_size (int): The size of the input images. Defaults to 64.
-        """
-        self.image_size = image_size
-        self.input_channels = 3
-        self.kernel_size = 4
-        self.stride = 2
-        self.padding = 1
-        self.negative_slope = 0.2
-
+        self.ndf = image_size
         super(Discriminator, self).__init__()
+        self.layer_config = OrderedDict(
+            [
+                ("conv1", nn.Conv2d(3, self.ndf, 4, 2, 1, bias=False)),
+                ("leaky1", nn.LeakyReLU(0.2, inplace=True)),
+                ("conv2", nn.Conv2d(self.ndf, self.ndf * 2, 4, 2, 1, bias=False)),
+                ("bn2", nn.BatchNorm2d(self.ndf * 2)),
+                ("leaky2", nn.LeakyReLU(0.2, inplace=True)),
+                ("conv3", nn.Conv2d(self.ndf * 2, self.ndf * 4, 4, 2, 1, bias=False)),
+                ("bn3", nn.BatchNorm2d(self.ndf * 4)),
+                ("leaky3", nn.LeakyReLU(0.2, inplace=True)),
+                ("conv4", nn.Conv2d(self.ndf * 4, self.ndf * 8, 4, 2, 1, bias=False)),
+                ("bn4", nn.BatchNorm2d(self.ndf * 8)),
+                ("leaky4", nn.LeakyReLU(0.2, inplace=True)),
+                ("conv5", nn.Conv2d(self.ndf * 8, 1, 4, 1, 0, bias=False)),
+                ("sigmoid", nn.Sigmoid()),
+            ]
+        )
+        self.main = nn.Sequential(self.layer_config)
 
-        self.layers_config = [
-            (self.input_channels, self.image_size, self.kernel_size,
-             self.stride, self.padding, self.negative_slope, False,),
-            (self.image_size, self.image_size * 2, self.kernel_size,
-             self.stride, self.padding, self.negative_slope, True,),
-            (self.image_size * 2, self.image_size * 4, self.kernel_size,
-             self.stride, self.padding, self.negative_slope, True,),
-            (self.image_size * 4, self.image_size * 8, self.kernel_size,
-             self.stride, self.padding, self.negative_slope, True,),
-            (self.image_size * 8, 1, self.kernel_size, self.stride // 2, 0),
-        ]
-
-        self.model = self.connected_layer(layers_config=self.layers_config)
-
-    def connected_layer(self, layers_config=None):
+    def forward(self, input):
         """
-        Constructs the discriminator model from the specified layer configuration. Each layer consists of a convolutional
-        layer, possibly followed by batch normalization, and a LeakyReLU activation function.
+        Forward pass of the discriminator. Takes an image tensor and returns the discriminator's prediction.
 
         Parameters:
-            layers_config (list of tuples): The configuration for each layer in the model. If None, an exception is raised.
+        - input (torch.Tensor): A batch of images of shape `(N, 3, image_size, image_size)`.
 
         Returns:
-            torch.nn.Sequential: The constructed discriminator model as a sequential container.
+        - torch.Tensor: A tensor of shape `(N,)` containing the probability that each image in the batch is real.
         """
-        layers = OrderedDict()
-        if layers_config is not None:
-            for index, config in enumerate(layers_config[:-1]):
-                (in_channels, out_channels, kernel_size, stride, padding, negative_slope, use_batch_norm,) = config
-
-                layers[f"{index+1}_conv"] = nn.Conv2d(
-                    in_channels, out_channels, kernel_size, stride, padding, bias=False
-                )
-                layers[f"{index+1}_activation"] = nn.LeakyReLU(
-                    negative_slope, inplace=True
-                )
-                if use_batch_norm:
-                    layers[f"{index+1}_batch_norm"] = nn.BatchNorm2d(out_channels)
-
-            in_channels, out_channels, kernel_size, stride, padding = layers_config[-1]
-
-            layers["out_layer"] = nn.Conv2d(
-                in_channels, out_channels, kernel_size, stride, padding, bias=False
-            )
-            layers["out_activation"] = nn.Sigmoid()
-
-            return nn.Sequential(layers)
-        else:
-            raise ValueError("Layer configuration is not defined properly.")
-
-    def forward(self, x):
-        """
-        Defines the forward pass of the discriminator.
-
-        Parameters:
-            x (torch.Tensor): The input tensor containing the images to classify.
-
-        Returns:
-            torch.Tensor: The output tensor representing the likelihood of each image being real.
-
-        Raises:
-            ValueError: If the input tensor is not defined properly.
-        """
-        if x is not None:
-            x = self.model(x)
-            return x.view(-1, 1).squeeze(1)
-        else:
-            raise ValueError("Input is not defined properly.")
+        return self.main(input).view(-1, 1).squeeze(1)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Define the Discriminator model".title())
+    parser = argparse.ArgumentParser(
+        description="Generate images using a GAN model.".capitalize()
+    )
 
-    parser.add_argument("--image_size", type=int, default=64, help="The size of the input image.".capitalize())
+    parser.add_argument(
+        "--image_size",
+        type=int,
+        default=64,
+        help="Image size for training.".capitalize(),
+    )
 
     args = parser.parse_args()
 
-    if args.image_size >= 64:
-        logging.info("Discriminator model with image size {}".format(args.image_size))
+    if args.image_size:
+        logging.info(f"Training with image size: {args.image_size}")
 
-        discriminator = Discriminator(args.image_size)
-
+        discriminator = Discriminator(image_size=args.image_size)
     else:
-        logging.error("Image size must be greater than or equal to 64.".capitalize())
+        logging.error("Please provide an image size.".capitalize())
