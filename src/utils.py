@@ -76,3 +76,38 @@ def weight_init(m):
     elif classname.find("BatchNorm") != -1:
         nn.init.normal_(tensor=m.weight.data, mean=1.0, std=0.02)
         nn.init.constant_(tensor=m.bias.data, val=0)
+
+
+def device_init(device=None):
+    """
+    Initializes and returns a PyTorch device based on the specified preference and availability.
+
+    This function is designed to facilitate the dynamic selection of the computational device for PyTorch operations,
+    allowing the user to preferentially select 'mps' (Apple Silicon GPU) or 'cuda' (NVIDIA GPU) devices. If the preferred
+    device is not available, or if no preference is specified, it defaults to using the CPU.
+
+    Parameters:
+        device (str, optional): The preferred device to use for PyTorch operations. Valid options are 'mps', 'cuda', or None.
+                                If 'mps' is selected, the function will check for Apple Silicon GPU availability. For 'cuda',
+                                it checks for NVIDIA GPU availability. If None or if the preferred device is not available,
+                                it defaults to 'cpu'. Defaults to None.
+
+    Returns:
+        torch.device: The initialized PyTorch device object, ready to be used for model operations or data manipulation.
+
+    Example:
+        >>> device = device_init("cuda")
+        >>> print(device)
+        device(type='cuda')  # This output depends on the availability of CUDA.
+
+    Note:
+        - The 'mps' device option is specifically for machines with Apple Silicon GPUs.
+        - It's recommended to explicitly specify your device preference when calling this function to ensure your computations
+          are performed on the desired hardware, when available.
+    """
+    if device == "mps":
+        return torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    elif device == "cuda":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        return torch.device("cpu")
