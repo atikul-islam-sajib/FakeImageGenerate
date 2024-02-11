@@ -1,7 +1,12 @@
+import sys
 import unittest
 import joblib as pickle
 
-# Assuming your utils and the necessary imports are correctly set up.
+sys.path.append("src/")
+
+from discriminator import Discriminator
+
+from utils import total_params
 
 
 class DataLoaderTest(unittest.TestCase):
@@ -17,6 +22,22 @@ class DataLoaderTest(unittest.TestCase):
 
         # Assert that the total number of samples is what you expect
         self.assertEqual(self.total_data, 63565)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+# =======================================================================================#
+
+
+class DisTest(unittest.TestCase):
+
+    def setUp(self):
+        self.image_size = 64
+        self.discriminator = Discriminator(image_size=self.image_size)
+
+    def test_total_params(self):
+        self.assertEqual(total_params(model=self.discriminator), 2765568)
 
 
 if __name__ == "__main__":

@@ -81,8 +81,7 @@ class Discriminator(nn.Module):
         layers = OrderedDict()
         if layers_config is not None:
             for index, config in enumerate(layers_config[:-1]):
-                (in_channels, out_channels, kernel_size, stride, padding, negative_slope, use_batch_norm,
-                 ) = config
+                (in_channels, out_channels, kernel_size, stride, padding, negative_slope, use_batch_norm,) = config
 
                 layers[f"{index+1}_conv"] = nn.Conv2d(
                     in_channels, out_channels, kernel_size, stride, padding, bias=False
@@ -94,6 +93,7 @@ class Discriminator(nn.Module):
                     layers[f"{index+1}_batch_norm"] = nn.BatchNorm2d(out_channels)
 
             in_channels, out_channels, kernel_size, stride, padding = layers_config[-1]
+
             layers["out_layer"] = nn.Conv2d(
                 in_channels, out_channels, kernel_size, stride, padding, bias=False
             )

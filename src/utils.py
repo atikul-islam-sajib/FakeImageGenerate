@@ -1,3 +1,4 @@
+import torch
 import pickle
 import os
 
@@ -21,3 +22,23 @@ def create_pickle(value=None, filename=None):
             pickle.dump(value, file)
     else:
         raise Exception("Pickle file is empty".capitalize())
+
+
+def total_params(model):
+    """
+    Calculates and prints the total number of parameters in a PyTorch model.
+
+    Parameters:
+        model (torch.nn.Module): The model to calculate parameters for.
+
+    Returns:
+        None. This function prints the total number of parameters directly.
+
+    Example:
+        >>> model = torch.nn.Linear(10, 5)
+        >>> total_params(model)
+        55
+    """
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total number of parameters: {total_params}")
+    return total_params
