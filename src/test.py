@@ -134,4 +134,4 @@ if __name__ == "__main__":
         else:
             raise Exception("Please provide the latent and num samples".capitalize())
     else:
-        logging.exception("Please provide the test flag".capitalize())
+        raise Exception("Please provide the test flag".capitalize())
