@@ -1,0 +1,14 @@
+site_name: Fake Skin Cancer Image Generator GAN
+
+nav:
+  - Home: index.md
+  - DataLoader: data_loader.md
+  - Generator: generator.md
+  - Discriminator: discriminator.md
+  - Trainer: trainer.md
+  - Test: test.md
+  - Utils: utils.md
+
+theme: readthedocs
+plugins:
+  - mkdocstrings

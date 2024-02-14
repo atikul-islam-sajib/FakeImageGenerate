@@ -15,6 +15,7 @@ logging.basicConfig(
     filename="./logs/cli.log",
 )
 
+
 if __name__ == "__main__":
     """
     # CLI for the Generative Adversarial Network (GAN)
