@@ -109,21 +109,23 @@ loader = Loader(
     normalized = True)
 
     dataloader = loader.extract_features()
-
     loader.create_dataloader()
+
+#================================================================================================================#
 
 # Set up the trainer with learning rate, epochs, and latent space size
 trainer = Trainer( device = "cuda", latent_space = 100, image_size = 64, lr = 0.0002, epochs = 20, display = True)
-
 trainer.train()
+
+#================================================================================================================#
 
 # Test the generated dataset and display the synthetic images
 test = Test( latent_space=100, num_samples =20, device="cuda")
-
 test.test()
 
-from IPython.display import Image
+#================================================================================================================#
 
+from IPython.display import Image
 Image("/content/FakeImageGenerate/outputs/fake_image.png")
 ```
 
