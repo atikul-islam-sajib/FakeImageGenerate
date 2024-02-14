@@ -131,7 +131,7 @@ This script initializes the data loader, downloads the Custom dataset, and prepa
 
 ## Documentation
 
-For detailed documentation on the implementation and usage, visit the [FakeImageGenerator Documentation](https://atikul-islam-sajib.github.io/GPWGAN-deploy/).
+For detailed documentation on the implementation and usage, visit the [FakeImageGenerator Documentation](https://atikul-islam-sajib.github.io/FIG-deploy/).
 
 ## Notebook Training
 
