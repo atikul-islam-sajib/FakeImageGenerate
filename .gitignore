@@ -1,0 +1,29 @@
+.mypy_cache/3.8/__main__.cpython-38.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+C extensions
+*.so
+*.DS_Store
+Distribution / packaging
+.Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+db.sqlite3
+db.sqlite3-journal
