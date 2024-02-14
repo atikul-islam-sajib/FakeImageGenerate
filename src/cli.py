@@ -149,8 +149,6 @@ if __name__ == "__main__":
             trainer.train()
 
             logging.info("Training is completed".capitalize())
-        else:
-            logging.error("Initialization is wrong".capitalize())
 
     if args.test:
         if args.latent_space and args.num_samples:
@@ -158,5 +156,3 @@ if __name__ == "__main__":
             test.test()
         else:
             raise Exception("Please provide the latent and num samples".capitalize())
-    else:
-        raise Exception("Please provide the test flag".capitalize())
